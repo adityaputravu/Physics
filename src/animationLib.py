@@ -13,7 +13,7 @@ class Animation():
             string background:  Background of the display
             boolean refresh_bg: Refresh the background colour
 
-            int fps:            The frame rate to cap. 
+            int fps:            The frame rate to cap 
             string Background:  The background colour
 
             bool refresh_bg:    Whether or not to overwrite the background constantly

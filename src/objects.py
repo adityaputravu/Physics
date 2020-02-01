@@ -591,6 +591,7 @@ class Wave:
 
         return None
         """
+
         self.points = self._create(num_points, width, height) 
         self.radius = point_rad
         self.width  = width
@@ -602,6 +603,7 @@ class Wave:
 
             return List of points
         """
+
         start = (0, int(height/2))
         points = [(start[0] + int(i * width / num_points), start[1]) for i in range(num_points+1)]
         return points
@@ -617,6 +619,7 @@ class Wave:
             return None
             
         """
+
         pygame.draw.line(screen, WHITE, (0, int(self.height / 2)), (self.width, int(self.height / 2)))
         pygame.draw.line(screen, WHITE, (int(self.width / 2), 0), (int(self.width / 2), self.height))
 
@@ -634,6 +637,7 @@ class Wave:
 
             return None
         """
+
         return int( (func((oscillations * 2 * pi * -x) / wavelength) * amplitude) / 2 ) 
 
     def oscillate(self, max_amp, func=sin, flip=1, oscillations=2, scaling_time=60):
@@ -649,6 +653,7 @@ class Wave:
 
             return None
         """
+
         def get_y(x, function=func):
             """
                 Nested function to make life easier to read
@@ -657,6 +662,7 @@ class Wave:
 
                 return int y value after applied function
             """
+
             return int(self.f(x, self.width, max_amp, oscillations, function) + (self.height / 2))
 
         self.points = [(x, get_y(x + (flip * pygame.time.get_ticks() / scaling_time))) for x,_ in self.points]

@@ -576,3 +576,88 @@ class Pendulum():
 
         pygame.draw.line(screen, colour, self.origin, ball_pos)
         pygame.draw.circle(screen, self.colour, ball_pos, self.radius)
+
+
+class Wave:
+    def __init__(self, num_points, width, height, point_rad=5):
+        """
+        Initialisation
+
+        int num_points:     The number of points to track on the wave
+        int width:          The width of the screen
+        int height:         The height of the screen
+
+        int point_rad:      The radius of each point
+
+        return None
+        """
+        self.points = self._create(num_points, width, height) 
+        self.radius = point_rad
+        self.width  = width
+        self.height = height
+
+    def _create(self, num_points, width, height):
+        """
+            Creates a list of points on the wave
+
+            return List of points
+        """
+        start = (0, int(height/2))
+        points = [(start[0] + int(i * width / num_points), start[1]) for i in range(num_points+1)]
+        return points
+
+    def draw(self, screen, line_col=RED, point_col=YELLOW):
+        """
+            Draw the grid and then draw the points and curve
+            
+            pygame.Surface screen:      Screen to draw to
+            Tuple(x, x, x) line_col:    Colour of the line
+            Tuple(x, x, x) point_col:   Colour of the points
+
+            return None
+            
+        """
+        pygame.draw.line(screen, WHITE, (0, int(self.height / 2)), (self.width, int(self.height / 2)))
+        pygame.draw.line(screen, WHITE, (int(self.width / 2), 0), (int(self.width / 2), self.height))
+
+        pygame.draw.lines(screen, line_col, False, self.points)
+        for p in self.points:
+            pygame.draw.circle(screen, point_col, p, self.radius)
+    
+    def f(self, x, wavelength, amplitude, oscillations, func):
+        """
+            Wave function
+
+            float x:            input
+            float wavelength:   The length of one period
+            float amplitude:    The largest amplitude 
+
+            return None
+        """
+        return int( (func((oscillations * 2 * pi * -x) / wavelength) * amplitude) / 2 ) 
+
+    def oscillate(self, max_amp, func=sin, flip=1, oscillations=2, scaling_time=60):
+        """
+            Perform the mathematical manipulations and apply the wave function
+
+            float max_amp:      The maximum amplitude
+            Function func:      The wave function to use
+
+            float flip:         Applied to time (x-axis) - manipulates direction of wave
+            float oscillations: The number of oscillations per wavelength
+            int scaling_time:   The number to divide milliseconds since the start by
+
+            return None
+        """
+        def get_y(x, function=func):
+            """
+                Nested function to make life easier to read
+
+                Function func:  The wave function to use
+
+                return int y value after applied function
+            """
+            return int(self.f(x, self.width, max_amp, oscillations, function) + (self.height / 2))
+
+        self.points = [(x, get_y(x + (flip * pygame.time.get_ticks() / scaling_time))) for x,_ in self.points]
+

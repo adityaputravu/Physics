@@ -14,22 +14,30 @@ class Ball():
             return None
         """
 
-        self.mass        = mass
-        self.colour      = colour
-        self.pos         = pos
-        self.id          = id
+        self.mass           = mass
+        self.colour         = colour
+        self.pos            = pos
+        self.starting_pos   = pos
+        self.id             = id
 
-        self.radius      = mass * mass_multiplicative if not radius else radius
+        self.radius         = mass * mass_multiplicative if not radius else radius
 
         self.velocity       = (0, 0)
         self.acceleration   = (0, 0)
-        
+
+        self.angle          = 0
+        self.aVelocity      = 0
+        self.aAcceleration  = 0
+
     def update(self):
         """
             Updates velocity and position
 
             return None
         """
+
+        self.angle     += self.aVelocity
+        self.aVelocity += self.aAcceleration
 
         self.velocity = np.add(self.velocity, self.acceleration)
         self.pos      = np.add(self.pos, self.velocity)
@@ -45,7 +53,7 @@ class Ball():
 
         force = np.divide(force, self.mass)
         self.acceleration = np.add(self.acceleration, force)
-    
+
     def apply_fluid_resistance(self, rho, Cd):
         """
             Calculating fluid resistance
@@ -76,7 +84,7 @@ class Ball():
 
         g = np.multiply(g, self.mass)
         self.apply_force(g)
-    
+
     def apply_gravitation_attraction(self, g, mass, pos):
         """
             Calculates the gravitational attraction to another object
@@ -132,6 +140,18 @@ class Ball():
 
         pygame.draw.circle(screen, self.colour, np.round(self.pos).astype(int), round(self.radius))
 
+    def draw_line(self, screen, colour=[0xff, 0xff, 0xff]):
+        """
+            Draws the attachment line from self.starting_pos to self.pos
+
+            pygame.Surface screen: Screen to draw to
+            list           colour: Colour to draw "string" as 
+
+            return None
+        """
+
+        pygame.draw.line(screen, colour, np.round(self.starting_pos).astype(int), np.round(self.pos).astype(int))
+    
     def moving(self, accuracy=0):
         """
             Moves the object based on mouse pointer (BETA)
@@ -170,17 +190,29 @@ class Polygon():
             Initialise
 
             list vector(x,y) pointlist: List of points of polygon
+
             string 			 colour: 	Colour of polygon
-            int 			 mass: 		mass of object
+            int                 	 mass: 		mass of object
+            int                          id:            Id number of rect
+
+            return None
         """
 
         self.points = pointlist
         self.colour = colour
         
         self.mass = mass
+
+        self.id   = id
         
-        self.velocity = 	(0,0)
+        self.area = self.find_area()
+
+        self.velocity =     (0,0)
         self.acceleration = (0,0)
+
+        self.angle          = 0
+        self.aVelocity      = 0 
+        self.aAcceleration  = 0
 
     def draw(self, screen):
         """
@@ -231,6 +263,7 @@ class Polygon():
 
             return None
         """
+        
         rotation = [[cos(angle), -sin(angle)],
                     [sin(angle),  cos(angle)]]
         
@@ -253,6 +286,7 @@ class Polygon():
 
             return None
         """
+
         rotation = [[ cos(angle), sin(angle)],
                     [-sin(angle), cos(angle)]]
 
@@ -264,17 +298,21 @@ class Polygon():
      
     def update(self):
         """
-            Updates velocity and position
+            Updates velocity and position and rotation
 
             return None
         """
+
+        self.angle      += self.aVelocity
+        self.aVelocity  += self.aAcceleration
+        self.rotate_clockwise(self.angle, self.find_centroid())  # to do make it do it from centre
 
         self.velocity = np.add(self.velocity, self.acceleration)
         
         r_points 	= self.relative_points(self.points[0])
         pos      	= np.add(self.points[0], self.velocity)
         self.points = [np.add(r_points[i], pos) for i in range(len(self.points))]
-     
+
     def apply_force(self, force):
         """
             Applying a force to the object
@@ -286,7 +324,7 @@ class Polygon():
 
         force = np.divide(force, self.mass)
         self.acceleration = np.add(self.acceleration, force)
-    
+
     def apply_fluid_resistance(self, rho, Cd, area):
         """
             Calculating fluid resistance
@@ -318,7 +356,7 @@ class Polygon():
         # w = mg 
         g = np.multiply(g, self.mass)
         self.apply_force(g)
-    
+
     def apply_gravitation_attraction(self, g, mass, pos):
         """
             Calculates the gravitational attraction to another object
@@ -336,7 +374,8 @@ class Polygon():
             
             return None
         """
-        r = np.subtract(pos, self.pos)
+
+        r = np.subtract(pos, self.points[0])
         d = magnitude(r)
         d = np.clip(d, 0.5, 2.5)
         force = (g * self.mass * mass) / (d*d)
@@ -362,9 +401,53 @@ class Polygon():
         friction = -1 * mew * magnitude(np.multiply(-1 * self.mass * cos(angle), g))
         friction = np.multiply(friction, normalise(self.velocity))
 
+    def find_area(self):
+        """
+            Finds the area of any polygon
+
+            1/2 * abs( sigma(i=1 to n) ( det [(x_i, y_i+1)
+                                              (y_i, x_i+1)]
+                                  ) )
+            det = determinant = ad - bc
+            
+            return float
+            Area
+        """
+
+        total = 0 
+        for i in range(len(self.points)-1):
+            (x,y),(x1,y1) = self.points[i],self.points[i+1]
+            total += (x1 + x) * (y1 - y) 
+
+        return 1/2 * abs(total)
+
+    def find_centroid(self):
+        """
+            Finds the centroid of a non intersecting n-side polygon
+
+            return float Tuple(x,y)
+            Centroid coordinates
+        """
+        
+        length = len(self.points)
+        signedArea = 0
+        centroid = (0, 0)
+        for i in range(length):
+            (x, y), (x1, y1) = self.points[i], self.points[(i+1) % length]
+            a = x*y1 - x1*y
+            signedArea += a
+            centroid = np.add(centroid, ((x + x1) * a, (y + y1) * a))
+                                                 
+        signedArea *= 0.5
+        if signedArea:
+            centroid = np.divide(centroid, 6*signedArea) 
+        else:
+            centroid = np.asarray((0, 0))
+        return centroid
+
 
 class Rect(Polygon):
-    def __init__(self, x, y, width, height, colour):
+    def __init__(self, x, y, width, height, colour, id=0):
         """
             Initialise
 
@@ -375,6 +458,7 @@ class Rect(Polygon):
             int height: height of rectangle
 
             string colour: colour of rectangle
+            int    id:     Id of rectangle
 
             return None
         """
@@ -384,7 +468,7 @@ class Rect(Polygon):
         self.height = height
         self.width  = width 
 
-        super().__init__(pointlist, colour)
+        super().__init__(pointlist, colour, id=id)
 
     def get_dimensions(self):
         """
@@ -394,12 +478,101 @@ class Rect(Polygon):
         """
 
         return self.points[0], np.subtract(self.points[2], self.points[0])
-    
-    def get_centre(self):
+
+    def find_centroid(self):
         """
-	    Gets the centre of the rectangle
-			
-	    return tuple(x,y)
+            Gets the centre of the rectangle
+                        
+            return tuple(x,y)
         """
-		
+                
         return np.divide(np.add(self.points[0], self.points[2]), 2)
+    
+    
+class Pendulum():
+    def __init__(self, origin, length, colour, radius=20, mass_multiplicative=0):
+        """
+            Note: 
+                Not very well tested - need to come back to this project.
+
+            Initialisation
+
+            Tuple(x,y) origin:  The start of the pendulum string
+            float length:       The length of the pendulum rope
+            float radius:       Radius of the pendulum ball
+
+            float mass_multiplicative: The multiplicative onto radius to calculate mass (leave as 0 to keep it as a constant)
+
+            return None
+        """
+        self.colour = colour
+
+        self.origin = origin
+        self.length = length
+        self.radius = radius
+
+        self.mass_multiplicative = mass_multiplicative if mass_multiplicative else 1
+
+        self.angle          = 0
+        self.aVelocity      = 0
+        self.aAcceleration  = 0
+    
+    def find_ball_pos(self):
+        """
+            Calculates the ball position on pendulum
+
+            return Tuple(x,y)
+            Position of ball
+        """
+
+        change = np.multiply(self.length, (sin(self.angle), cos(self.angle)))
+        return np.add(self.origin, change)
+    
+    def move(self, gravity=1):
+        """
+            Moves pendulum 
+
+            float gravity: gravity constant
+            
+            return None
+        """
+
+        self.aAcceleration = -1 * gravity * sin(self.angle)
+
+    def angle_from_pos(self, position):
+        """
+            Returns angle so that it can calculate new position
+
+            Tuple(x,y) position: position to move ball to 
+            
+            return float 
+            angle
+        """
+        
+        difference = np.subtract(self.origin, position)
+        return acos(difference[1] / self.length) if difference[1] >= 0 else asin(difference[0] / self.length)
+
+    def update(self):
+        """
+            Updates the angle based on rotation
+
+            return None
+        """
+
+        self.angle      += self.aVelocity
+        self.aVelocity  += self.aAcceleration
+
+    def draw(self, screen, colour=[0xff, 0xff, 0xff]):
+        """
+            Draws the string and ball 
+            
+            pygame.Surface screen:  Screen to draw to
+            list colour:            Colour to draw line
+            
+            return None
+        """
+
+        ball_pos = np.round(self.find_ball_pos()).astype(int)
+
+        pygame.draw.line(screen, colour, self.origin, ball_pos)
+        pygame.draw.circle(screen, self.colour, ball_pos, self.radius)

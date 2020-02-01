@@ -1,9 +1,10 @@
 import pygame
 import numpy as np
 from math import * 
+from constants import *
 
 class Animation():
-    def __init__(self, width, height, fps=30, background="black", refresh_bg=True):
+    def __init__(self, width, height, fps=30, background=BLACK, refresh_bg=True):
         """
             Initialise
 
@@ -11,29 +12,27 @@ class Animation():
             int height: Height of screen
 
             string background:  Background of the display
-            boolean refresh_bg: Refresh the background colour
+
+            int fps:            The frame rate to cap 
+            string Background:  The background colour
+
+            bool refresh_bg:    Whether or not to overwrite the background constantly
 
             return None
         """
 
         self.width   = width
         self.height  = height
-        self.colours = {
-                "black": [0x00, 0x00, 0x00],
-                "white": [0xff, 0xff, 0xff],
-                "red":   [0xff, 0x00, 0x00],
-                "green": [0x00, 0xff, 0x00],
-                "blue" : [0x00, 0x00, 0xff]
-                }
 
-        self.background = self.colours[background]
-        self.refresh_bg = refresh_bg
+        self.background     = background
+        self.refresh_bg     = refresh_bg
 
-        self.display    = pygame.display
-        self.screen     = self.display.set_mode((self.width, self.height))
+        self.display        = pygame.display
+        self.screen         = self.display.set_mode((self.width, self.height))
         
-        self.clock      = pygame.time.Clock()
-        self.fps        = fps
+        self.clock          = pygame.time.Clock()
+        self.fps            = fps
+        self.frame_count    = 0 
 
         self.running = True
 
@@ -120,6 +119,7 @@ class Animation():
             
             self.display_logic()
             self.update()
+            self.frame_count += 1
 
 
 def trim(minimum, maximum, to_trim):

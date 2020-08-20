@@ -3,6 +3,7 @@ from animationLib import *
 from objects import * 
 from constants import *
 from math import sin, cos, pi
+import pygame
 
 
 # TODO:
